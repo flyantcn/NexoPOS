@@ -1,0 +1,41 @@
+# Git
+.git
+.github
+.gitattributes
+.gitignore
+
+# 依赖（容器内重新安装）
+vendor
+node_modules
+npm-debug.log*
+yarn-error.log*
+
+# Laravel 生成文件
+storage/logs/*
+!storage/logs/.gitignore
+bootstrap/cache/*
+!bootstrap/cache/.gitignore
+
+# 测试/构建产物
+tests/.coverage
+.coverage
+build
+dist
+
+# IDE / 编辑器
+.vscode
+.idea
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# 临时文件
+*.log
+*.tmp
+.env.backup
+
+# Docker 自身
+Dockerfile
+podman-compose.yml
+podman-compose.override.yml

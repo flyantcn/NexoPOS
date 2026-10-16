@@ -5,11 +5,10 @@ namespace App\Mcp\Tools;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
+use Laravel\Mcp\Server\Tool;
 
-class UpdateSettingsTool extends AuthorizedTool
+class UpdateSettingsTool extends Tool
 {
-    protected array $permissions = [ 'manage.options' ];
-
     public string $name = 'update_settings';
 
     public string $description = 'Updates NexoPOS configuration settings via ns()->option->set(key, value).';

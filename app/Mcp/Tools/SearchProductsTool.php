@@ -8,13 +8,12 @@ use App\Services\ProductService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
+use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[IsReadOnly]
-class SearchProductsTool extends AuthorizedTool
+class SearchProductsTool extends Tool
 {
-    protected array $permissions = [ 'nexopos.read.products' ];
-
     protected string $name = 'search_products';
 
     protected string $description = 'Search for products by name or keyword. Returns a list of matching products with pricing, stock, and category information.';

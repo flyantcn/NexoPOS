@@ -1,4 +1,16 @@
 .env
+.env.bak
+.env.podman
+.env.*.bak
+*.deb
+.composer/
+.config/
+.codex/
+.do/
+.agents/
+scripts/*.sh.bak
+podman-compose.yml.bak
+
 vendor
 mns-backup
 mns-download

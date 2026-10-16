@@ -8,13 +8,12 @@ use App\Services\CustomerService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
+use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[IsReadOnly]
-class GetCustomerTool extends AuthorizedTool
+class GetCustomerTool extends Tool
 {
-    protected array $permissions = [ 'nexopos.read.customers' ];
-
     protected string $name = 'get_customer';
 
     protected string $description = 'Retrieve a single customer by their numeric ID, including their billing and shipping addresses.';

@@ -34,6 +34,7 @@ return [
         'vi' => 'Vietnamese',
         'sq' => 'Shqiptare',
         'ko' => '한국어',
+        'zh' => '简体中文',
     ],
 
     /**

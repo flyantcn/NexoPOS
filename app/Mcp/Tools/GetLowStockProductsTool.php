@@ -8,13 +8,12 @@ use App\Services\ReportService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
+use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[IsReadOnly]
-class GetLowStockProductsTool extends AuthorizedTool
+class GetLowStockProductsTool extends Tool
 {
-    protected array $permissions = [ 'nexopos.reports.low-stock' ];
-
     protected string $name = 'get_low_stock_products';
 
     protected string $description = 'Retrieve products that have fallen below their configured low-stock alert threshold. Optionally filter by category or unit IDs.';

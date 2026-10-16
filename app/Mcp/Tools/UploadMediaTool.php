@@ -7,24 +7,25 @@ use finfo;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Str;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
+use Laravel\Mcp\Server\Tool;
 
-class UploadMediaTool extends AuthorizedTool
+class UploadMediaTool extends Tool
 {
-    protected array $permissions = [ 'nexopos.upload.medias' ];
-
     public string $name = 'upload_media';
 
-    public string $description = 'Uploads a base64-encoded image or PDF to the media library.';
+    public string $description = 'Uploads a local file to the media library. Note: this tool requires a valid local file path within the workspace.';
 
     public function schema( JsonSchema $schema ): array
     {
         return [
             'base64_file' => $schema->string()
-                ->description( 'The base64-encoded content or data URI of a JPEG, PNG, GIF, WebP, or PDF file.' )
-                ->required(),
+                ->description( 'The base64-encoded content of the file to upload. This is an alternative to providing a file path and can be used for files that are not accessible via a local path.' )
+                ->nullable(),
+            'file_path' => $schema->string()
+                ->description( 'The absolute local path to the file to upload.' )
+                ->nullable(),
             'custom_name' => $schema->string()
                 ->description( 'An optional custom name for the uploaded file (excluding extension).' )
                 ->nullable(),
@@ -33,51 +34,83 @@ class UploadMediaTool extends AuthorizedTool
 
     public function handle( Request $request ): Response
     {
-        $base64File = $request->get( 'base64_file' );
-        $customName = $request->get( 'custom_name' );
+        $filePath = $request->get( 'file_path' );
+        $customName = $request->get( 'custom_name' ) ?? null;
 
-        if ( ! is_string( $base64File ) || $base64File === '' ) {
-            return Response::error( __( 'A base64-encoded file is required.' ) );
-        }
+        if ( File::exists( $filePath ) ) {
+            $originalName = File::basename( $filePath );
+            $mimeType = File::mimeType( $filePath );
+            $size = File::size( $filePath );
 
-        if ( preg_match( '/^data:[^;]+;base64,(.*)$/s', $base64File, $matches ) ) {
-            $base64File = $matches[1];
-        }
+            // UploadedFile expects ($path, $originalName, $mimeType, $error, $test)
+            // Set $test to true so it doesn\'t try to move uploaded file via PHP copy_uploaded_file which fails for non-HTTP uploads.
+            $uploadedFile = new UploadedFile(
+                $filePath,
+                $originalName,
+                $mimeType,
+                null,
+                true
+            );
 
-        $decodedFile = base64_decode( $base64File, true );
+            $service = app()->make( MediaService::class );
+            $media = $service->upload( $uploadedFile, $customName );
 
-        if ( $decodedFile === false || strlen( $decodedFile ) > 10 * 1024 * 1024 ) {
-            return Response::error( __( 'The file must be valid base64 and no larger than 10 MB.' ) );
-        }
+            if ( ! $media ) {
+                return Response::error( __( 'Failed to upload media. Please check the file path and try again.' ) );
+            }
 
-        $mimeType = ( new finfo( FILEINFO_MIME_TYPE ) )->buffer( $decodedFile );
-        $allowedMimeTypes = [
-            'image/jpeg' => 'jpg',
-            'image/png' => 'png',
-            'image/gif' => 'gif',
-            'image/webp' => 'webp',
-            'application/pdf' => 'pdf',
-        ];
+            return Response::json( [
+                'id' => $media->id,
+                'name' => $media->name,
+                'path' => $media->path,
+                'url' => $media->url,
+                'message' => __( 'Media uploaded successfully.' ),
+            ] );
+        } elseif ( ! empty( $request->get( 'base64_file' ) ) ) {
+            $base64File = $request->get( 'base64_file' );
 
-        if ( ! isset( $allowedMimeTypes[ $mimeType ] ) ) {
-            return Response::error( __( 'Only JPEG, PNG, GIF, WebP, and PDF files are supported.' ) );
-        }
+            // Supports both raw base64 and data URI:
+            // data:image/png;base64,iVBORw0KGgo...
+            $mimeType = null;
+            $extension = null;
 
-        $extension = $allowedMimeTypes[ $mimeType ];
-        $safeCustomName = is_string( $customName ) && $customName !== ''
-            ? Str::slug( $customName )
-            : null;
-        $safeCustomName = $safeCustomName ?: null;
-        $originalName = ( $safeCustomName ?: 'uploaded-file-' . uniqid() ) . '.' . $extension;
-        $temporaryPath = storage_path( 'app/tmp/' . uniqid( 'media_', true ) . '.' . $extension );
+            if ( preg_match( '/^data:(.*?);base64,(.*)$/', $base64File, $matches ) ) {
+                $mimeType = $matches[1];
+                $base64File = $matches[2];
+            }
 
-        if ( ! File::exists( dirname( $temporaryPath ) ) ) {
-            File::makeDirectory( dirname( $temporaryPath ), 0755, true );
-        }
+            $decodedFile = base64_decode( $base64File, true );
 
-        File::put( $temporaryPath, $decodedFile );
+            if ( $decodedFile === false ) {
+                return Response::error( __( 'Invalid base64 file provided.' ) );
+            }
 
-        try {
+            if ( ! $mimeType ) {
+                $finfo = new finfo( FILEINFO_MIME_TYPE );
+                $mimeType = $finfo->buffer( $decodedFile ) ?: 'application/octet-stream';
+            }
+
+            $extension = match ( $mimeType ) {
+                'image/jpeg' => 'jpg',
+                'image/png' => 'png',
+                'image/gif' => 'gif',
+                'image/webp' => 'webp',
+                'application/pdf' => 'pdf',
+                default => 'bin',
+            };
+
+            $originalName = $customName
+                ? $customName . '.' . $extension
+                : 'uploaded-file-' . uniqid() . '.' . $extension;
+
+            $temporaryPath = storage_path( 'app/tmp/' . uniqid( 'media_', true ) . '.' . $extension );
+
+            if ( ! File::exists( dirname( $temporaryPath ) ) ) {
+                File::makeDirectory( dirname( $temporaryPath ), 0755, true );
+            }
+
+            File::put( $temporaryPath, $decodedFile );
+
             $uploadedFile = new UploadedFile(
                 $temporaryPath,
                 $originalName,
@@ -85,21 +118,27 @@ class UploadMediaTool extends AuthorizedTool
                 null,
                 true
             );
-            $media = app( MediaService::class )->upload( $uploadedFile, $safeCustomName );
-        } finally {
+
+            $service = app()->make( MediaService::class );
+            $media = $service->upload( $uploadedFile, $customName );
+
             File::delete( $temporaryPath );
-        }
 
-        if ( ! $media ) {
-            return Response::error( __( 'Failed to upload media from base64 file.' ) );
-        }
+            if ( ! $media ) {
+                return Response::error( __( 'Failed to upload media from base64 file.' ) );
+            }
 
-        return Response::json( [
-            'id' => $media->id,
-            'name' => $media->name,
-            'path' => $media->path,
-            'url' => $media->url,
-            'message' => __( 'Media uploaded successfully.' ),
-        ] );
+            return Response::json( [
+                'id' => $media->id,
+                'name' => $media->name,
+                'path' => $media->path,
+                'url' => $media->url,
+                'message' => __( 'Media uploaded successfully.' ),
+            ] );
+        } else {
+            return Response::text(
+                __( 'File not found at the specified path. Please provide a valid local file path or a base64-encoded file.' )
+            );
+        }
     }
 }

@@ -6,11 +6,10 @@ namespace App\Mcp\Resources;
 
 use App\Models\TaxGroup;
 use Laravel\Mcp\Response;
+use Laravel\Mcp\Server\Resource;
 
-class TaxGroupsResource extends AuthorizedResource
+class TaxGroupsResource extends Resource
 {
-    protected array $permissions = [ 'nexopos.read.taxes' ];
-
     protected string $uri = 'pos://resources/tax-groups';
 
     protected string $mimeType = 'application/json';

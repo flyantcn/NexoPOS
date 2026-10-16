@@ -5,11 +5,10 @@ declare(strict_types=1);
 namespace App\Mcp\Resources;
 
 use Laravel\Mcp\Response;
+use Laravel\Mcp\Server\Resource;
 
-class StoreConfigResource extends AuthorizedResource
+class StoreConfigResource extends Resource
 {
-    protected array $permissions = [ 'manage.options' ];
-
     protected string $uri = 'pos://resources/store-config';
 
     protected string $mimeType = 'application/json';

@@ -13,13 +13,12 @@ use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\DB;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
+use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[IsReadOnly]
-class SearchProductSalesTool extends AuthorizedTool
+class SearchProductSalesTool extends Tool
 {
-    protected array $permissions = [ 'nexopos.reports.sales' ];
-
     protected string $name = 'search_product_sales';
 
     protected string $description = 'Search product sales metrics, identify most purchased products, top returned products, and overall sales volume during a specific period.';

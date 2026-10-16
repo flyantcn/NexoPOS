@@ -6,11 +6,10 @@ namespace App\Mcp\Resources;
 
 use App\Models\ProductCategory;
 use Laravel\Mcp\Response;
+use Laravel\Mcp\Server\Resource;
 
-class ProductCategoriesResource extends AuthorizedResource
+class ProductCategoriesResource extends Resource
 {
-    protected array $permissions = [ 'nexopos.read.categories' ];
-
     protected string $uri = 'pos://resources/product-categories';
 
     protected string $mimeType = 'application/json';

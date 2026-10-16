@@ -17,6 +17,7 @@ class UnitFactory extends Factory
     {
         return Hook::filter( 'ns-unit-factory', [
             'name' => $this->faker->name,
+            'identifier' => $this->faker->unique()->slug(2),
             'description' => $this->faker->sentence,
             'base_unit' => $this->faker->randomElement( [ 0, 1 ] ),
             'value' => $this->faker->numberBetween( 5, 20 ),

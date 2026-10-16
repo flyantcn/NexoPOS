@@ -8,13 +8,12 @@ use App\Services\ReportService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
+use Laravel\Mcp\Server\Tool;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[IsReadOnly]
-class GetDashboardSummaryTool extends AuthorizedTool
+class GetDashboardSummaryTool extends Tool
 {
-    protected array $permissions = [ 'read.dashboard' ];
-
     protected string $name = 'get_dashboard_summary';
 
     protected string $description = 'Retrieve the daily sales summary dashboard including total sales, orders, taxes, and other key metrics for a given date range. Defaults to today if no dates are specified.';

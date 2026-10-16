@@ -16,12 +16,30 @@ export default ({ mode }) => {
         base: './',
         server: {
             port: 3331,
-            host: '127.0.0.1',
+            host: '0.0.0.0',
+            cors: {
+                origin: [
+                    'http://192.168.1.33:8080',
+                    'http://localhost:8080',
+                    'http://127.0.0.1:8080',
+                ],
+            },
             hmr: {
                 protocol: 'wss',
-                host: 'localhost',
+                host: '192.168.1.33',
             },
             https: true,
+            watch: {
+                ignored: [
+                    '**/vendor/**',
+                    '**/storage/**',
+                    '**/node_modules/**',
+                    '**/.git/**',
+                    '**/public/build/**',
+                    '**/public/modules/**',
+                    '**/bootstrap/cache/**',
+                ],
+            },
         },
         resolve: {
             alias: [
