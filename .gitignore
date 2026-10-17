@@ -79,3 +79,4 @@ playwright/.auth/
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+/database/test.txt
