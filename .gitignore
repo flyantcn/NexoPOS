@@ -81,3 +81,14 @@ playwright/.auth/
 /playwright/.auth/
 /database/test.txt
 podman-compose.yml
+storage/
+bootstrap/cache/
+
+!storage/app/.gitignore
+!storage/framework/.gitignore
+!storage/framework/cache/.gitignore
+!storage/framework/sessions/.gitignore
+!storage/framework/testing/.gitignore
+!storage/framework/views/.gitignore
+!storage/logs/.gitignore
+!bootstrap/cache/.gitignore
