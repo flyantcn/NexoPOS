@@ -18,7 +18,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    user: "1000:1000"
     ports:
       - "9000:9000"
     image: nexopos-php:dev

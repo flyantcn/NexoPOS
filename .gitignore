@@ -80,3 +80,4 @@ playwright/.auth/
 /playwright/.cache/
 /playwright/.auth/
 /database/test.txt
+podman-compose.yml
