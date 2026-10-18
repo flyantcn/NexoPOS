@@ -109,6 +109,35 @@ services:
     networks:
       - nexopos-net
 
+  queue-worker:
+    image: nexopos-php:dev
+    container_name: nexopos-worker
+    restart: unless-stopped
+    working_dir: /var/www/html
+    command: php artisan queue:work --sleep=3 --tries=3 --max-time=3600
+    volumes:
+      - .:/var/www/html:z
+      - ./storage:/var/www/html/storage:z
+      - ./bootstrap/cache:/var/www/html/bootstrap/cache:z
+      - php_composer_cache:/root/.composer
+      - php_npm_cache:/root/.npm
+    depends_on:
+      - db
+      - redis
+    environment:
+      - DB_HOST=host.containers.internal
+      - DB_PORT=3307
+      - DB_DATABASE=${DB_DATABASE:-nexopos}
+      - DB_USERNAME=${DB_USERNAME:-nexopos}
+      - DB_PASSWORD=${DB_PASSWORD:-nexopos_secret}
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - NS_ENV=local
+    networks:
+      - nexopos-net
+    stdin_open: true
+    tty: true
+
 volumes:
   db_data:
   nginx_logs:
