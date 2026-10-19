@@ -1,0 +1,10 @@
+<?xml version="1.0" ?>
+<module>
+    <namespace>NsMultiStore</namespace>
+    <version>1.0</version>
+    <author>flyant</author>
+    <name>Multi Store Management</name>
+    <description>
+        <locale lang="en">多店铺管理模块</locale>
+    </description>
+</module>

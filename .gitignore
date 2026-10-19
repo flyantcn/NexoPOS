@@ -24,6 +24,7 @@ worker.log
 *.ignore.*
 *.log.*
 modules/*
+!modules/NsMultiStore/
 !modules/.temp
 modules/.temp/*
 !modules/index.html
@@ -93,3 +94,4 @@ bootstrap/cache/
 !storage/logs/.gitignore
 !bootstrap/cache/.gitignore
 docker/nginx.conf
+
