@@ -19,3 +19,11 @@ git remote -v
 
 # 想查看自己相对上游到底改了什么：
 git diff upstream/master..HEAD --stat
+
+
+# 改代码...
+
+# 提交推送
+git add -A
+git commit -m "描述改动"
+git push origin master
