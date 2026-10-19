@@ -92,3 +92,4 @@ bootstrap/cache/
 !storage/framework/views/.gitignore
 !storage/logs/.gitignore
 !bootstrap/cache/.gitignore
+docker/nginx.conf
