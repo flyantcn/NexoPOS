@@ -8,6 +8,7 @@
 .codex/
 .do/
 .agents/
+CODEBUDDY.md
 scripts/*.sh.bak
 podman-compose.yml.bak
 
