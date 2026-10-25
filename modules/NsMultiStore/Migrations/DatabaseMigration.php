@@ -1,13 +1,11 @@
 <?php
+
 /**
  * Table Migration
- * @package 6.2.4
-**/
+ **/
 
 namespace Modules\NsMultiStore\Migrations;
 
-use App\Classes\Schema;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
 
 return new class extends Migration
@@ -17,8 +15,8 @@ return new class extends Migration
      */
     public function up()
     {
-                // ...
-            }
+        // ...
+    }
 
     /**
      * Reverse the migrations.
@@ -27,6 +25,6 @@ return new class extends Migration
      */
     public function down()
     {
-                // ...
-            }
+        // ...
+    }
 };

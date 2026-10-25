@@ -1,18 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.5/phpunit.xsd" bootstrap="vendor/autoload.php" colors="true" cacheDirectory=".phpunit.cache">
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.5/phpunit.xsd" bootstrap="bootstrap.php" colors="true" cacheDirectory=".phpunit.cache">
   <testsuites>
     <testsuite name="Feature">
-      <directory suffix="CreateTestDatabaseSQLite.php">./tests/Feature</directory>
-      <directory suffix="HardResetTest.php">./tests/Feature</directory>
-      <directory suffix="StoreEnableModuleTest.php">modules/NsMultiStore/Tests/Feature</directory>
-      <directory suffix="StoreCreateTest.php">modules/NsMultiStore/Tests/Feature</directory>
+      <directory suffix="CreateTestDatabaseSQLite.php">./Feature</directory>
+      <directory suffix="HardResetTest.php">./Feature</directory>
+      <directory suffix="StoreEnableModuleTest.php">../modules/NsMultiStore/Tests/Feature</directory>
+      <directory suffix="StoreCreateTest.php">../modules/NsMultiStore/Tests/Feature</directory>
     </testsuite>
   </testsuites>
   <php>
-    <env name="APP_BASE_PATH" value="."/>
     <server name="APP_ENV" value="TESTING"/>
+    <server name="AUTOLOAD_MODULES" value="NsMultiStore"/>
     <server name="BCRYPT_ROUNDS" value="4"/>
     <server name="CACHE_DRIVER" value="array"/>
+    <server name="DB_CONNECTION" value="sqlite"/>
+    <server name="DB_DATABASE" value="tests/database.sqlite"/>
+    <server name="DB_PREFIX" value="ns_"/>
+    <server name="DB_HOST" value=""/>
+    <server name="DB_USERNAME" value=""/>
+    <server name="DB_PASSWORD" value=""/>
     <server name="MAIL_MAILER" value="array"/>
     <server name="QUEUE_CONNECTION" value="sync"/>
     <server name="SESSION_DRIVER" value="array"/>

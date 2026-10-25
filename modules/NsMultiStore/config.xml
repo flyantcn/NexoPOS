@@ -5,6 +5,7 @@
     <author>flyant</author>
     <name>Multi Store Management</name>
     <description>
-        <locale lang="en">多店铺管理模块</locale>
+        <locale lang="en">Manage single, chain and franchise stores.</locale>
+        <locale lang="zh">管理单店、连锁店与加盟店。</locale>
     </description>
 </module>

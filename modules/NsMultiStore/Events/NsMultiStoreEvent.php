@@ -1,4 +1,5 @@
 <?php
+
 namespace Modules\NsMultiStore\Events;
 
 use Illuminate\Broadcasting\InteractsWithSockets;
@@ -7,7 +8,7 @@ use Illuminate\Queue\SerializesModels;
 
 /**
  * Register Event
-**/
+ **/
 class NsMultiStoreEvent
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
