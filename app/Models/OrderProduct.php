@@ -48,7 +48,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
  */
 class OrderProduct extends NsModel
 {
-    use HasFactory, NsFiltredAttributes, NsFlashData;
+    use HasFactory, \Modules\NsMultiStore\Traits\StoreScoped, NsFiltredAttributes, NsFlashData;
 
     const CONDITION_DAMAGED = 'damaged';
 

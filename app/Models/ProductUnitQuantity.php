@@ -42,7 +42,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
  */
 class ProductUnitQuantity extends NsModel
 {
-    use BroadcastsEvents, HasFactory;
+    use BroadcastsEvents, HasFactory, \Modules\NsMultiStore\Traits\StoreScoped;
 
     protected $table = 'nexopos_' . 'products_unit_quantities';
 

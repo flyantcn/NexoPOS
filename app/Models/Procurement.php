@@ -33,7 +33,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
  */
 class Procurement extends NsModel
 {
-    use HasFactory;
+    use HasFactory, \Modules\NsMultiStore\Traits\StoreScoped;
 
     protected $table = 'nexopos_' . 'procurements';
 

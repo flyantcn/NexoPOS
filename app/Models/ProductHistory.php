@@ -32,7 +32,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
  */
 class ProductHistory extends NsModel
 {
-    use HasFactory;
+    use HasFactory, \Modules\NsMultiStore\Traits\StoreScoped;
 
     protected $table = 'nexopos_' . 'products_histories';
 

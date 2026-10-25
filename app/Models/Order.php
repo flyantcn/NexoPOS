@@ -65,7 +65,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
  */
 class Order extends NsModel
 {
-    use HasFactory, NsFlashData;
+    use HasFactory, \Modules\NsMultiStore\Traits\StoreScoped, NsFlashData;
 
     public $timestamps = false;
 

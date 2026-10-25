@@ -157,6 +157,13 @@ class ProcurementService
             }
 
             $procurement->author_id = Auth::id();
+
+            /**
+             * The "creating" event doesn't run because of "withoutEvents",
+             * the store must be assigned manually to keep the procurement
+             * isolated from the other stores.
+             */
+            $procurement->store_id = app( 'current_store_id' );
             $procurement->cost = 0;
             $procurement->save();
         } );

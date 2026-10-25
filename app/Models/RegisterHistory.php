@@ -21,7 +21,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
  */
 class RegisterHistory extends NsModel
 {
-    use HasFactory;
+    use HasFactory, \Modules\NsMultiStore\Traits\StoreScoped;
 
     protected $table = 'nexopos_' . 'registers_history';
 
