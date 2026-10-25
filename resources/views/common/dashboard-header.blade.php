@@ -8,6 +8,7 @@
         </div>
     </div>
     <div class="top-tools-side flex items-center -mx-2">
+        {!! \App\Classes\Hook::filter( 'ns-dashboard-header-tools', '' ) !!}
         <div clss="px-2">
             <ns-notifications></ns-notifications>
         </div>
