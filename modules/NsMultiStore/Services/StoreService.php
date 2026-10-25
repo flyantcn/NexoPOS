@@ -25,6 +25,13 @@ class StoreService
     protected ?Store $currentStore = null;
 
     /**
+     * The ids of every store visible for the current request.
+     *
+     * @var int[]
+     */
+    protected array $visibleStoreIds = [];
+
+    /**
      * Whether the stores table is available. It's cached to avoid
      * a schema lookup on every request.
      */
@@ -214,11 +221,68 @@ class StoreService
     }
 
     /**
-     * Define the store used by the current request.
+     * Define the store used by the current request and the stores that become
+     * visible along with it.
      */
     public function defineCurrentStore( ?Store $store ): void
     {
         $this->currentStore = $store;
+
+        $this->defineVisibleStoreIds(
+            $store instanceof Store ? $this->computeVisibleStoreIds( $store ) : []
+        );
+    }
+
+    /**
+     * Returns the ids of every store visible for the current request.
+     *
+     * @return int[]
+     */
+    public function getVisibleStoreIds(): array
+    {
+        return $this->visibleStoreIds;
+    }
+
+    /**
+     * Define the stores visible for the current request.
+     *
+     * @param int[] $storeIds
+     */
+    public function defineVisibleStoreIds( array $storeIds ): void
+    {
+        $this->visibleStoreIds = array_values( array_unique( array_map( 'intval', $storeIds ) ) );
+    }
+
+    /**
+     * Compute the stores visible while using a specific store.
+     *
+     * - a single or franchise store only sees itself (a franchise store is
+     *   strongly isolated, its headquarter only receives aggregated reports);
+     * - a chain store also sees the other chain stores of its brand, so stock
+     *   can be shared across them (cross-store transfer).
+     *
+     * @return int[]
+     */
+    public function computeVisibleStoreIds( Store $store ): array
+    {
+        $ids = [ $store->id ];
+
+        if ( $store->type !== Store::TYPE_CHAIN || ! $this->storesAreAvailable() ) {
+            return $ids;
+        }
+
+        $related = Store::query()
+            ->where( 'status', Store::STATUS_ACTIVE )
+            ->where( 'type', Store::TYPE_CHAIN )
+            ->where( 'id', '!=', $store->id )
+            ->when(
+                $store->parent_id !== null,
+                fn ( $query ) => $query->where( 'parent_id', $store->parent_id ),
+                fn ( $query ) => $query->where( 'parent_id', $store->id )
+            )
+            ->pluck( 'id' );
+
+        return array_merge( $ids, $related->map( fn ( $id ) => (int) $id )->all() );
     }
 
     /**

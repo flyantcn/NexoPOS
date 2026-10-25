@@ -156,4 +156,23 @@ class StoreScopeTest extends TestCase
 
         $this->assertEquals( $before + 2, Order::query()->count() );
     }
+
+    /**
+     * A chain store sees the records of the other chain stores of its brand.
+     */
+    public function test_a_chain_store_sees_the_records_of_its_sibling_stores(): void
+    {
+        $headquarter = Store::factory()->create( [ 'type' => Store::TYPE_CHAIN, 'status' => Store::STATUS_ACTIVE ] );
+        $chain = Store::factory()->create( [ 'type' => Store::TYPE_CHAIN, 'parent_id' => $headquarter->id, 'status' => Store::STATUS_ACTIVE ] );
+        $sibling = Store::factory()->create( [ 'type' => Store::TYPE_CHAIN, 'parent_id' => $headquarter->id, 'status' => Store::STATUS_ACTIVE ] );
+
+        app( StoreService::class )->defineCurrentStore( $sibling );
+        $siblingOrder = $this->makeOrder();
+
+        app( StoreService::class )->defineCurrentStore( $chain );
+
+        $ids = Order::query()->pluck( 'id' )->toArray();
+
+        $this->assertContains( $siblingOrder->id, $ids );
+    }
 }

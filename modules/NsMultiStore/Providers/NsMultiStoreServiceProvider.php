@@ -26,6 +26,7 @@ class NsMultiStoreServiceProvider extends ServiceProvider
          */
         $this->app->bind( 'current_store_id', fn ( $app ) => $app->make( StoreService::class )->getCurrentStoreId() );
         $this->app->bind( 'current_store', fn ( $app ) => $app->make( StoreService::class )->getCurrentStore() );
+        $this->app->bind( 'visible_store_ids', fn ( $app ) => $app->make( StoreService::class )->getVisibleStoreIds() );
 
         Hook::addFilter( 'ns-dashboard-menus', [ DashboardMenusFilter::class, 'register' ], 30 );
         Hook::addFilter( 'ns-dashboard-header-tools', [ StoreSwitcher::class, 'render' ], 10 );

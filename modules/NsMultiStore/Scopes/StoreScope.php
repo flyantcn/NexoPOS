@@ -7,22 +7,25 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Scope;
 
 /**
- * Restrict every query of a store scoped model to the store currently used.
+ * Restrict every query of a store scoped model to the stores visible for the
+ * current request.
  *
- * The store is resolved from the container, therefore:
- * - on a dashboard request, the store resolved by the "ResolveCurrentStore"
- *   middleware is used;
- * - on console commands and scheduled tasks, the value is null and no filter
+ * The visible stores are resolved from the container, therefore:
+ * - on a dashboard request, the stores computed by the "ResolveCurrentStore"
+ *   middleware are used. A single or franchise store only sees itself, while
+ *   a chain store also sees the other chain stores of its brand so stock can
+ *   be shared across them;
+ * - on console commands and scheduled tasks, the list is empty and no filter
  *   is applied so that global maintenance operations keep working.
  */
 class StoreScope implements Scope
 {
     public function apply( Builder $builder, Model $model ): void
     {
-        $storeId = app( 'current_store_id' );
+        $storeIds = app( 'visible_store_ids' );
 
-        if ( $storeId !== null ) {
-            $builder->where( $model->getTable() . '.store_id', $storeId );
+        if ( ! empty( $storeIds ) ) {
+            $builder->whereIn( $model->getTable() . '.store_id', $storeIds );
         }
     }
 }
