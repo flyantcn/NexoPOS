@@ -65,7 +65,7 @@ class StoreSwitcher
                 . '</button>';
         }
 
-        $switchBaseUrl = ns()->url( '/dashboard/multistore/stores/switch/' );
+        $switchBaseUrl = ns()->url( '/dashboard/multistore/stores/switch' );
         $csrfToken = csrf_token();
 
         return '
@@ -107,7 +107,7 @@ class StoreSwitcher
                         const storeId = option.getAttribute("data-store-id");
                         const token = document.querySelector("meta[name=\"csrf-token\"]")?.getAttribute("content") || "' . $csrfToken . '";
 
-                        fetch("' . $switchBaseUrl . '" + storeId, {
+                        fetch("' . $switchBaseUrl . '" + "/" + storeId, {
                             method: "POST",
                             credentials: "same-origin",
                             headers: {

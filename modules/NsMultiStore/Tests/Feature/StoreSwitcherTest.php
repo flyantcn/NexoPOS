@@ -48,6 +48,7 @@ class StoreSwitcherTest extends TestCase
         $this->assertStringContainsString( $firstStore->name, $html );
         $this->assertStringContainsString( $secondStore->name, $html );
         $this->assertStringContainsString( 'data-store-id="' . $firstStore->id . '"', $html );
+        $this->assertStringContainsString( 'stores/switch" + "/" + storeId', $html );
     }
 
     /**
