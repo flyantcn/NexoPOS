@@ -19,7 +19,6 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "9000:9000"
     image: nexopos-php:dev
     container_name: nexopos-php
     restart: unless-stopped
@@ -37,8 +36,8 @@ services:
     depends_on:
       - db
     environment:
-      - DB_HOST=host.containers.internal
-      - DB_PORT=3307
+      - DB_HOST=db
+      - DB_PORT=3306
       - DB_DATABASE=${DB_DATABASE:-nexopos}
       - DB_USERNAME=${DB_USERNAME:-nexopos}
       - DB_PASSWORD=${DB_PASSWORD:-nexopos_secret}
@@ -58,7 +57,7 @@ services:
     restart: unless-stopped
     ports:
       # 外部访问: http://<小主机IP>:8080
-      - "8080:80"
+      - "8081:80"
     volumes:
       - .:/var/www/html:z
       - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
@@ -125,8 +124,8 @@ services:
       - db
       - redis
     environment:
-      - DB_HOST=host.containers.internal
-      - DB_PORT=3307
+      - DB_HOST=db
+      - DB_PORT=3306
       - DB_DATABASE=${DB_DATABASE:-nexopos}
       - DB_USERNAME=${DB_USERNAME:-nexopos}
       - DB_PASSWORD=${DB_PASSWORD:-nexopos_secret}
