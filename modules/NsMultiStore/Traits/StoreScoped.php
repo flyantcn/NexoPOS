@@ -17,7 +17,7 @@ trait StoreScoped
 {
     protected static function bootStoreScoped(): void
     {
-        static::addGlobalScope( new StoreScope );
+        static::addGlobalScope( app( StoreScope::class ) );
 
         static::creating( function ( $model ) {
             if ( empty( $model->store_id ) ) {

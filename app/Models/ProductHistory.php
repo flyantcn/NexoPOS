@@ -36,6 +36,8 @@ class ProductHistory extends NsModel
 
     protected $table = 'nexopos_' . 'products_histories';
 
+    protected $guarded = [ 'id' ];
+
     const ACTION_STOCKED = 'procured';
 
     const ACTION_DELETED = 'deleted';

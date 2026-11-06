@@ -8,6 +8,7 @@ use App\Traits\NsCustomerAddress;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -29,13 +30,17 @@ use Illuminate\Support\Facades\DB;
  */
 class Customer extends UserScope
 {
-    use HasFactory, NsCustomerAddress;
+    use HasFactory, NsCustomerAddress, SoftDeletes;
 
     protected $table = 'nexopos_' . 'users';
 
     protected $hidden = [
         'password',
         'remember_token',
+    ];
+
+    protected $casts = [
+        'owner_store_id' => 'integer',
     ];
 
     public function setDependencies()
@@ -63,6 +68,19 @@ class Customer extends UserScope
 
             CustomerModelBootedEvent::dispatch( $builder );
         } );
+    }
+
+    /**
+     * The store that opened the member card. Only used for statistics and
+     * performance attribution, never for permissions.
+     */
+    public function ownerStore()
+    {
+        return $this->belongsTo(
+            related: \Modules\NsMultiStore\Models\Store::class,
+            foreignKey: 'owner_store_id',
+            ownerKey: 'id'
+        );
     }
 
     /**

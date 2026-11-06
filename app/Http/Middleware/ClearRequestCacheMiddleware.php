@@ -18,13 +18,19 @@ class ClearRequestCacheMiddleware
      */
     public function handle( Request $request, Closure $next )
     {
-        $response = $next( $request );
+        $response = null;
 
-        /**
-         * In case any opeartion should occurs
-         * once the response is about to bet sent.
-         */
-        ResponseReadyEvent::dispatch( $response );
+        try {
+            $response = $next( $request );
+        } finally {
+            /**
+             * Even when the request fails (for example with a permission
+             * error), the request scoped cache must be cleared. Otherwise a
+             * stale permission cache keeps rejecting the user until its TTL
+             * (1 hour) expires.
+             */
+            ResponseReadyEvent::dispatch( $response );
+        }
 
         return $response;
     }

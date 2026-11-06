@@ -49,8 +49,8 @@ class UserStoreBindingTest extends TestCase
         $employee = $this->createEmployee();
 
         $response = $this->submitRequest( 'ns.multistore.users-stores', [
-            'user_id' => $employee->id,
             'general' => [
+                'user_id' => $employee->id,
                 'store_id' => $store->id,
                 'role_namespace' => Role::STORECASHIER,
             ],
@@ -81,8 +81,8 @@ class UserStoreBindingTest extends TestCase
         ] );
 
         $response = $this->submitRequest( 'ns.multistore.users-stores', [
-            'user_id' => $employee->id,
             'general' => [
+                'user_id' => $employee->id,
                 'store_id' => $store->id,
                 'role_namespace' => Role::STORECASHIER,
             ],
@@ -103,8 +103,8 @@ class UserStoreBindingTest extends TestCase
         $employee = $this->createEmployee();
 
         $response = $this->submitRequest( 'ns.multistore.users-stores', [
-            'user_id' => $employee->username,
             'general' => [
+                'user_id' => $employee->username,
                 'store_id' => $store->id,
                 'role_namespace' => Role::STORECASHIER,
             ],
@@ -127,14 +127,50 @@ class UserStoreBindingTest extends TestCase
         $store = Store::factory()->create();
 
         $response = $this->submitRequest( 'ns.multistore.users-stores', [
-            'user_id' => 'ghost-user',
             'general' => [
+                'user_id' => 'ghost-user',
                 'store_id' => $store->id,
                 'role_namespace' => Role::STORECASHIER,
             ],
         ] );
 
         $response->assertStatus( 422 );
+    }
+
+    /**
+     * While a binding is edited, an administrator might type the employee
+     * username instead of selecting it from the search results. The id must
+     * be resolved on update as well, otherwise the username would be stored
+     * as a non integer user_id and the database would reject the request.
+     */
+    public function test_a_binding_can_be_updated_using_the_employee_username(): void
+    {
+        $store = Store::factory()->create();
+        $employee = $this->createEmployee();
+
+        $relation = UserStoreRelation::create( [
+            'user_id' => $employee->id,
+            'store_id' => $store->id,
+            'role_namespace' => Role::STORECASHIER,
+        ] );
+
+        $response = $this->withSession( $this->app[ 'session' ]->all() )
+            ->json( 'PUT', 'api/crud/ns.multistore.users-stores/' . $relation->id, [
+                'general' => [
+                    'user_id' => $employee->username,
+                    'store_id' => $store->id,
+                    'role_namespace' => Role::STORECASHIER,
+                ],
+            ] );
+
+        $response->assertStatus( 200 );
+        $response->assertJson( [ 'status' => 'success' ] );
+
+        $this->assertDatabaseHas( 'nsmultistore_users_stores_relations', [
+            'id' => $relation->id,
+            'user_id' => $employee->id,
+            'store_id' => $store->id,
+        ] );
     }
 
     /**

@@ -55,6 +55,21 @@ class UserStoreCrud extends CrudService
     ];
 
     /**
+     * Fields which will be filled during post/put.
+     *
+     * The form has no "main" field (NexoPOS renders it as a plain text input),
+     * which makes the frontend submit an empty "undefined" key. Listing the
+     * accepted fields here prevents that key from being written to the model.
+     */
+    public $fillable = [
+        'user_id',
+        'store_id',
+        'role_namespace',
+        'uuid',
+        'author_id',
+    ];
+
+    /**
      * Adding relation.
      */
     public $relations = [
@@ -148,40 +163,48 @@ class UserStoreCrud extends CrudService
      */
     public function getForm( $entry = null ): array
     {
+        /**
+         * The employee field must live inside a tab rather than as the form
+         * "main" field. NexoPOS always renders the "main" field as a plain
+         * text input, so a search-select placed there would display the raw
+         * numeric user_id and submit whatever text is typed into it.
+         */
         return CrudForm::form(
-            main: FormInput::searchSelect(
-                label: __m( 'Employee', 'NsMultiStore' ),
-                name: 'user_id',
-                description: __m( 'The employee that will be allowed to use the store.', 'NsMultiStore' ),
-                validation: 'required',
-
-                /**
-                 * The employees are searched from the "EmployeeCrud" resource,
-                 * so that the whole user list isn't loaded on the form. The
-                 * label displayed combines the full name and the username
-                 * while the id is what gets submitted.
-                 */
-                options: [
-                    'search' => FormInput::searchSelectOptions(
-                        identifier: EmployeeCrud::IDENTIFIER,
-                        limit: 10,
-                        moreLabel: __m( '+{count} more employees. Type to search.', 'NsMultiStore' ),
-                        minLength: 1,
-                    ),
-                ],
-                props: [
-                    'optionAttributes' => [
-                        'label' => 'display_name',
-                        'value' => 'id',
-                    ],
-                ],
-                value: $entry->user_id ?? '',
-            ),
+            main: [],
             tabs: CrudForm::tabs(
                 CrudForm::tab(
                     label: __m( 'General', 'NsMultiStore' ),
                     identifier: 'general',
                     fields: CrudForm::fields(
+                        FormInput::searchSelect(
+                            label: __m( 'Employee', 'NsMultiStore' ),
+                            name: 'user_id',
+                            description: __m( 'The employee that will be allowed to use the store.', 'NsMultiStore' ),
+                            validation: 'required',
+
+                            /**
+                             * The employees are searched from the "EmployeeCrud"
+                             * resource, so that the whole user list isn't loaded
+                             * on the form. The label displayed combines the full
+                             * name and the username while the id is what gets
+                             * submitted.
+                             */
+                            options: [
+                                'search' => FormInput::searchSelectOptions(
+                                    identifier: EmployeeCrud::IDENTIFIER,
+                                    limit: 10,
+                                    moreLabel: __m( '+{count} more employees. Type to search.', 'NsMultiStore' ),
+                                    minLength: 1,
+                                ),
+                            ],
+                            props: [
+                                'optionAttributes' => [
+                                    'label' => 'display_name',
+                                    'value' => 'id',
+                                ],
+                            ],
+                            value: $entry->user_id ?? '',
+                        ),
                         FormInput::searchSelect(
                             label: __m( 'Store', 'NsMultiStore' ),
                             name: 'store_id',
@@ -215,14 +238,42 @@ class UserStoreCrud extends CrudService
      */
     public function filterPostInputs( $inputs )
     {
+        return $this->prepareInputs( $inputs );
+    }
+
+    /**
+     * Filter PUT input fields.
+     *
+     * NexoPOS only runs the "filterPostInputs" hook on create, so the same
+     * normalisation must be applied on update as well. Otherwise an username
+     * or a name typed on the form would be stored as a non integer "user_id"
+     * and make the database reject the request.
+     *
+     * @param  array              $inputs
+     * @param  UserStoreRelation  $entry
+     * @return array
+     */
+    public function filterPutInputs( $inputs, $entry = null )
+    {
+        return $this->prepareInputs(
+            $inputs,
+            $entry instanceof UserStoreRelation ? $entry->id : null
+        );
+    }
+
+    /**
+     * Normalise and validate the inputs shared by the create and the update.
+     */
+    protected function prepareInputs( array $inputs, ?int $ignoredRelationId = null ): array
+    {
         if ( empty( $inputs[ 'uuid' ] ) ) {
             $inputs[ 'uuid' ] = (string) Str::uuid();
         }
 
         /**
          * The search-select submits the id, but an administrator might type
-         * an username directly. Both forms are accepted here so that the
-         * form never reaches the database with a non integer value.
+         * an username or a full name directly. Both forms are accepted here so
+         * that the form never reaches the database with a non integer value.
          */
         $inputs[ 'user_id' ] = $this->resolveUserId( $inputs[ 'user_id' ] ?? null );
         $inputs[ 'store_id' ] = $this->resolveStoreId( $inputs[ 'store_id' ] ?? null );
@@ -235,10 +286,8 @@ class UserStoreCrud extends CrudService
         /**
          * While an entry is updated, its own relation must be ignored.
          */
-        $entryId = $this->getEntryId();
-
-        if ( $entryId !== null ) {
-            $query->where( 'id', '!=', $entryId );
+        if ( $ignoredRelationId !== null ) {
+            $query->where( 'id', '!=', $ignoredRelationId );
         }
 
         if ( $query->exists() ) {
@@ -314,15 +363,7 @@ class UserStoreCrud extends CrudService
     }
 
     /**
-     * Returns the id of the entry being updated, if any.
-     */
-    protected function getEntryId()
-    {
-        return request()->input( 'id' ) ?: request()->route( 'id' );
-    }
-
-    /**
-     * Resolve an employee from either his id or his username.
+     * Resolve an employee from his id, username or full name.
      */
     protected function resolveUserId( mixed $value ): int
     {
@@ -332,8 +373,21 @@ class UserStoreCrud extends CrudService
             $user = User::find( $value );
         }
 
-        if ( ! $user instanceof User && is_string( $value ) && $value !== '' ) {
-            $user = User::where( 'username', $value )->first();
+        if ( ! $user instanceof User && is_string( $value ) && trim( $value ) !== '' ) {
+            $term = trim( $value );
+
+            $user = User::where( 'username', $term )->first();
+
+            /**
+             * The label displayed by the search-select is built from the full
+             * name, so accept it as well when an administrator types it.
+             */
+            if ( ! $user instanceof User ) {
+                $user = User::query()
+                    ->whereRaw( 'CONCAT(COALESCE(first_name, ""), " ", COALESCE(last_name, "")) = ?', [ $term ] )
+                    ->orWhereRaw( 'CONCAT(COALESCE(last_name, ""), " ", COALESCE(first_name, "")) = ?', [ $term ] )
+                    ->first();
+            }
         }
 
         if ( ! $user instanceof User ) {

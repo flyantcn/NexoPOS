@@ -437,6 +437,9 @@ class CrudService
                 $resource->afterPost( $unfiltredInputs, $entry, $inputs );
             }
 
+            // Trigger action hooks for afterPost
+            Hook::action( get_class( $resource ) . '@afterPost', $unfiltredInputs, $entry, $inputs );
+
             CrudAfterPostEvent::dispatch( $resource, $unfiltredInputs, $entry );
         }
 
@@ -447,6 +450,9 @@ class CrudService
             if ( method_exists( $resource, 'afterPut' ) ) {
                 $resource->afterPut( $unfiltredInputs, $entry, $inputs );
             }
+
+            // Trigger action hooks for afterPut
+            Hook::action( get_class( $resource ) . '@afterPut', $unfiltredInputs, $entry, $inputs );
 
             CrudAfterPutEvent::dispatch( $resource, $unfiltredInputs, $entry );
         }

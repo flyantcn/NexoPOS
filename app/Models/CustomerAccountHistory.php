@@ -30,10 +30,22 @@ class CustomerAccountHistory extends NsModel
 
     protected $table = 'nexopos_' . 'customers_account_history';
 
+    protected $casts = [
+        'store_id' => 'integer',
+    ];
+
     public $dispatchesEvents = [
         'created' => CustomerAccountHistoryAfterCreatedEvent::class,
         'updated' => CustomerAccountHistoryAfterUpdatedEvent::class,
     ];
+
+    /**
+     * The store where the wallet operation happened.
+     */
+    public function store()
+    {
+        return $this->belongsTo( \Modules\NsMultiStore\Models\Store::class, 'store_id' );
+    }
 
     public function customer()
     {

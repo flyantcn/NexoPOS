@@ -55,11 +55,17 @@ class Store extends NsModel
         'description',
         'author_id',
         'uuid',
+        'can_configure_loyalty_rules',
+        'can_create_local_campaign',
+        'can_view_all_members',
     ];
 
     protected $casts = [
         'parent_id' => 'integer',
         'author_id' => 'integer',
+        'can_configure_loyalty_rules' => 'boolean',
+        'can_create_local_campaign' => 'boolean',
+        'can_view_all_members' => 'boolean',
     ];
 
     protected static function newFactory(): Factory
@@ -123,5 +129,28 @@ class Store extends NsModel
         return $this->belongsToMany( User::class, 'nsmultistore_users_stores_relations', 'store_id', 'user_id' )
             ->withPivot( 'role_namespace' )
             ->withTimestamps();
+    }
+
+    /**
+     * Check if this store is a headquarter.
+     * - Single store: always HQ
+     * - Chain store: HQ if no parent
+     * - Franchise: never HQ
+     */
+    public function isHeadquarter(): bool
+    {
+        return $this->type === self::TYPE_SINGLE
+            || ( $this->type === self::TYPE_CHAIN && is_null( $this->parent_id ) );
+    }
+
+    /**
+     * Check if this store can manage global products.
+     * - Chain HQ (type=chain, parent_id=null): yes
+     * - Single store (isHeadquarter): yes, global = available to all its bound stores
+     * - Franchise/branch: no
+     */
+    public function canManageGlobalProducts(): bool
+    {
+        return $this->isHeadquarter();
     }
 }

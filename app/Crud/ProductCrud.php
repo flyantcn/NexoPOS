@@ -649,6 +649,16 @@ class ProductCrud extends CrudService
      */
     public function filterPostInputs( $inputs )
     {
+        $currentStoreId = app( 'current_store_id' );
+        $isGlobal = ! empty( $inputs[ 'is_global_product' ] );
+
+        if ( $currentStoreId !== null && ! $isGlobal ) {
+            $inputs[ 'store_id' ] = $currentStoreId;
+        }
+
+        // Remove helper field not in model
+        unset( $inputs[ 'is_global_product' ] );
+
         return $inputs;
     }
 
@@ -660,18 +670,39 @@ class ProductCrud extends CrudService
      */
     public function filterPutInputs( $inputs, Product $entry )
     {
+        $currentStoreId = app( 'current_store_id' );
+        $isGlobal = ! empty( $inputs[ 'is_global_product' ] );
+
+        // Switching from local to global
+        if ( $isGlobal && $entry->store_id !== null ) {
+            $inputs[ 'store_id' ] = null;
+        }
+
+        // Switching from global to local
+        if ( ! $isGlobal && $entry->store_id === null && $currentStoreId !== null ) {
+            $inputs[ 'store_id' ] = $currentStoreId;
+        }
+
+        // Remove helper field not in model
+        unset( $inputs[ 'is_global_product' ] );
+
         return $inputs;
     }
 
     /**
      * Before saving a record
      *
-     * @param  Request $request
+     * @param  array $unfilteredInputs
+     * @param  mixed $entry
+     * @param  array $filteredInputs
      * @return void
      */
-    public function beforePost( $request )
+    public function beforePost( $unfilteredInputs, $entry, $filteredInputs )
     {
-        return $request;
+        // Remove helper field not in model (runs after Hook::filter which may re-add it)
+        unset( $filteredInputs[ 'is_global_product' ] );
+
+        return $filteredInputs;
     }
 
     /**
@@ -700,15 +731,26 @@ class ProductCrud extends CrudService
     }
 
     /**
+     * Find entry by ID, bypassing global scopes for editing.
+     */
+    public function findEntry( int|string $id ): ?Product
+    {
+        return $this->getModel()::withoutGlobalScopes()->find( $id );
+    }
+
+    /**
      * Before updating a record
      *
      * @param Request $request
      * @param  object entry
      * @return void
      */
-    public function beforePut( $request, $entry )
+    public function beforePut( $unfilteredInputs, $entry, $filteredInputs )
     {
-        return $request;
+        // Remove helper field not in model (runs after Hook::filter which may re-add it)
+        unset( $filteredInputs[ 'is_global_product' ] );
+
+        return $filteredInputs;
     }
 
     /**
@@ -725,7 +767,7 @@ class ProductCrud extends CrudService
          * be newly assigned
          */
         if ( $product instanceof Product ) {
-            $product->taxes()->delete();
+            $product->product_taxes()->delete();
         }
 
         return $request;

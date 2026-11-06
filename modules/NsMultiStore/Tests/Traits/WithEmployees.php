@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\UserAttribute;
 use App\Models\UserRoleRelation;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Modules\NsMultiStore\Models\Store;
 use Modules\NsMultiStore\Models\UserStoreRelation;
 
@@ -28,11 +29,13 @@ trait WithEmployees
      */
     protected function createEmployee( array $stores = [], string $roleNamespace = Role::STORECASHIER ): User
     {
+        $suffix = Str::random( 12 );
+
         $user = new User;
-        $user->username = 'employee-' . fake()->unique()->numberBetween( 1000, 9999 );
+        $user->username = 'employee-' . $suffix;
         $user->first_name = fake()->firstName();
         $user->last_name = fake()->lastName();
-        $user->email = fake()->unique()->safeEmail();
+        $user->email = $suffix . '@employee.test';
         $user->password = Hash::make( 'password' );
         $user->active = true;
         $user->save();
