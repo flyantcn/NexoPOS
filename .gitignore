@@ -96,3 +96,5 @@ bootstrap/cache/
 !bootstrap/cache/.gitignore
 
 AGENTS.md.boost-original
+tests/.phpunit.cache/
+tests/.write_test*

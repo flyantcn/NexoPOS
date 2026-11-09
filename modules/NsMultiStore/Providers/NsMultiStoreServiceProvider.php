@@ -11,7 +11,9 @@ use App\Services\Helper;
 use Illuminate\Contracts\Http\Kernel as HttpKernel;
 use Illuminate\Foundation\Http\Kernel as HttpFoundationKernel;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\ServiceProvider;
 use Modules\NsMultiStore\Console\Commands\SyncGlobalProductsCommand;
 use Modules\NsMultiStore\Filters\CustomerCrudFilter;
@@ -188,6 +190,40 @@ class NsMultiStoreServiceProvider extends ServiceProvider
 
         // Register StoreScope for Product model
         Product::addGlobalScope( app( StoreScope::class ) );
+
+        /**
+         * 全局商品创建后，自动为所有活跃店铺插入 nexopos_store_products 上架记录。
+         * 不侵入核心 ProductService/ProductsController，兜底历史孤儿商品可跑
+         * ns-multistore:sync-global-products。
+         */
+        Product::created( function ( Product $product ): void {
+            if ( $product->store_id !== null ) {
+                return;
+            }
+
+            try {
+                $storeIds = Store::where( 'status', Store::STATUS_ACTIVE )->pluck( 'id' )->all();
+
+                foreach ( $storeIds as $storeId ) {
+                    StoreProduct::firstOrCreate(
+                        [ 'store_id' => $storeId, 'product_id' => $product->id ],
+                        [
+                            'is_active'  => true,
+                            'quantity'   => 0,
+                            'author_id'  => Auth::id(),
+                        ]
+                    );
+                }
+            } catch ( \Throwable $e ) {
+                Log::error(
+                    'NsMultiStore: failed to auto-publish global product',
+                    [
+                        'product_id' => $product->id,
+                        'error'      => $e->getMessage(),
+                    ]
+                );
+            }
+        } );
 
         /**
          * The current store is resolved after the session has started,

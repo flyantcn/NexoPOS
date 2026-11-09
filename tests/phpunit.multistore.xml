@@ -6,6 +6,7 @@
       <directory suffix="HardResetTest.php">./Feature</directory>
       <directory suffix="StoreEnableModuleTest.php">../modules/NsMultiStore/Tests/Feature</directory>
       <directory suffix="StoreCreateTest.php">../modules/NsMultiStore/Tests/Feature</directory>
+      <directory suffix="GlobalProductAutoPublishTest.php">../modules/NsMultiStore/Tests/Feature</directory>
     </testsuite>
   </testsuites>
   <php>

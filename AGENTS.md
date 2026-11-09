@@ -135,6 +135,12 @@ podman-compose -p nexopos-dev -f podman-compose.dev.yml -f compose.override.lubu
 - `docker/nginx.conf` 不能被 `.gitignore` 忽略（compose 挂载的必需文件）
 - 新功能从 `feature/*` 分支开发
 
+## Agent 操作纪律
+- 启动/重启/停止容器前，先说明意图并等用户确认
+- 跑任何 `migrate`、`db:seed`、`migrate:fresh`、`db:wipe` 前，必须等用户明确批准
+- 读取数据库只读查询（SELECT/DESCRIBE）无需确认
+
+
 ## 测试
 
 合并前必须通过多店铺测试：
@@ -171,6 +177,11 @@ curl -I -s http://192.168.1.51:8080 | head -1
 
 **prod 上禁止**：`down`、`down -v`、`ns:reset`、`migrate:fresh`、`db:seed`、直接改业务代码。
 <laravel-boost-guidelines>
+
+
+
+
+
 === foundation rules ===
 
 # Laravel Boost Guidelines
