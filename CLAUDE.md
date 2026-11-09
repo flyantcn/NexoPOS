@@ -1,3 +1,5 @@
+> ⚠️ 本文件为历史版本，最新约束见 AGENTS.md。文中 "nexopos_products.is_active" 已废弃，实际字段为 status（available/unavailable）。
+
 # NexoPOS 多店铺开发约束（Claude Code 必读）
 
 ## 🚨 三条最致命铁律（违反会导致 500 或数据事故）
