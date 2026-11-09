@@ -95,3 +95,4 @@ bootstrap/cache/
 !storage/logs/.gitignore
 !bootstrap/cache/.gitignore
 
+AGENTS.md.boost-original
