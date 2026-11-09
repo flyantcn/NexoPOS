@@ -110,7 +110,7 @@ $storeIds = app()->bound( 'visible_store_ids' ) ? app( 'visible_store_ids' ) : [
 - 门店本地商品：`store_id = N`
 - 门店上架目录：`nexopos_store_products`（`is_active` 控上下架、`quantity` 门店库存、`price_override` 可空）
 - 门店下架：只改 `nexopos_store_products.is_active = false`
-- 全局软下架：`nexopos_products.is_active = false`，不删记录
+- 全局软下架：`nexopos_products.status = 'unavailable'`，不删记录
 - 库存流水：`nexopos_products_histories` 带 `store_id`
 - 店铺类型：single/franchise 强隔离，chain 通过 `computeVisibleStoreIds()` 聚合
 
