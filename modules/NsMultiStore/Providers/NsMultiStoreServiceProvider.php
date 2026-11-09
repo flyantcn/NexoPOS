@@ -175,6 +175,9 @@ class NsMultiStoreServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+	
+	$this->loadMigrationsFrom( __DIR__ . '/../Migrations' );
+	
         /**
          * Member business rules are applied through model events, so every
          * entry point (dashboard CRUD, POS, API) keeps the same behaviour.
