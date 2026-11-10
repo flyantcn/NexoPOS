@@ -24,40 +24,38 @@
 - `nexopos-nginx`：宿主 8081 → 容器 80，挂载 `./docker/nginx.conf → /etc/nginx/conf.d/default.conf:ro`，`fastcgi_pass php:9000`
 - `nexopos-db`：宿主 3307 → 容器 3306（MariaDB 11，库 `nexopos_dev`，用户 `nexopos` / 密码 `nexopos_secret`，root 密码 `root_secret`）
 - `nexopos-redis`：宿主 6380 → 容器 6379
-- `nexopos-worker`：队列 worker（`php artisan queue:work`），改代码后必须 `podman-compose ... restart queue-worker`
+- `nexopos-worker`：队列 worker（`php artisan queue:work`），改代码后必须重启 `podman-compose ... restart queue-worker`
 
 ## 铁律
 1. 所有 artisan 命令必须带 `-u www-data -T`：
    `podman-compose -p nexopos-dev -f podman-compose.dev.yml -f compose.override.lubuntu.yml exec -u www-data -T php php artisan <cmd>`
 
 2. 权限修复（rootless 下 `chown` 无效，必须用 `podman unshare chmod`）：
+
    ```bash
    podman unshare chmod -R 777 ~/nexopos-dev/storage ~/nexopos-dev/bootstrap/cache ~/nexopos-dev/database ~/nexopos-dev/config
    podman unshare chmod 0755 ~/nexopos-dev/public ~/nexopos-dev/public/modules ~/nexopos-dev/public/modules-lang
-   
-   
+   ```
 
-容器 `up -d` / `restart` 后必做一次。
+   容器 `up -d` / `restart` 后必做一次
 
-1. 模块符号链接（宿主机手动 `ln -s`，不要用 `modules:symlink`，它在 rootless 下会因权限失败）：
+3. 模块符号链接（宿主机手动 `ln -s`，不要用 `modules:symlink`，它在 rootless 下会因权限失败）：
 
-``` bash
+   ```bash
    cd ~/nexopos-dev
    rm -f public/modules/nsmultistore
    ln -s /var/www/html/modules/NsMultiStore/Public public/modules/nsmultistore
    podman unshare chmod 0755 public/modules
-```
+   ```
 
 
-
+  ⚠️ 此链接在宿主机是**断链**（目标 `/var/www/html/...` 仅容器内有效），属正常现象。
 
 ## .env 关键配置（dev）
 
 必须满足，否则会 419 / `Session store not set on request` 500：
 
-dotenv
-
-```
+```ini
 APP_URL=http://192.168.1.51:8081
 SESSION_DOMAIN=192.168.1.51
 SANCTUM_STATEFUL_DOMAINS=192.168.1.51:8081,127.0.0.1:8081,localhost:8081
@@ -74,9 +72,9 @@ SANCTUM_STATEFUL_DOMAINS=192.168.1.51:8081,127.0.0.1:8081,localhost:8081
 ## 模块系统
 
 - 模块：NsMultiStore（已启用）
-- 迁移自动发现：`NsMultiStoreServiceProvider::boot()` 已 `loadMigrationsFrom(__DIR__ . '/../Migrations')`，新增迁移后 `php artisan migrate` 即可，无需 `--path`
-- 路由注册：`Route::middleware('api')->prefix('api')->group(__DIR__ . '/../Routes/api.php')`
-  - `Routes/api.php` 内不要再写 `'api'` 前缀
+- dev 环境：`NsMultiStoreServiceProvider::boot()` 已 `loadMigrationsFrom(__DIR__ . '/../Migrations')`，新增迁移后 `php artisan migrate` 即可，无需 `--path`
+- **测试环境例外**：`modules:migrate` 命令因 `ucwords($namespace)` 大小写 bug 扫不到 `NsMultiStore/Migrations/`，测试环境必须显式 `--path=modules/NsMultiStore/Migrations`
+- 路由注册：`Route::middleware('api')->prefix('api')->group(__DIR__ . '/../Routes/api.php')`,`Routes/api.php` 内不要再写 `'api'` 前缀
 - 控制台命令：`SyncGlobalProductsCommand`（`ns-multistore:sync-global-products`）
 
 ## 作用域注册
@@ -89,11 +87,9 @@ SANCTUM_STATEFUL_DOMAINS=192.168.1.51:8081,127.0.0.1:8081,localhost:8081
 
 `modules/NsMultiStore/Scopes/StoreScope.php` 第 32 行**已经改成**：
 
-``` php
+```php
 $storeIds = app()->bound( 'visible_store_ids' ) ? app( 'visible_store_ids' ) : [];
 ```
-
-
 
 不要改回 `app( 'visible_store_ids' )`——CLI / 未登录场景（`Helper::installed()` 为 false，模块 provider 不加载）会抛 `BindingResolutionException`。
 
@@ -101,8 +97,21 @@ $storeIds = app()->bound( 'visible_store_ids' ) ? app( 'visible_store_ids' ) : [
 
 `Customer` 用了 `SoftDeletes`，`deleted_at` 列已确认存在（`nexopos_users.deleted_at`，`timestamp NULL`），`migrations` 表有记录。补齐迁移文件：`database/migrations/update/2026_11_06_000000_add_soft_deletes_to_users_table.php`（带 `Schema::hasColumn` 幂等检查）。**不要删除这个迁移**，否则 dashboard 会 500。
 
-⚠️ 该迁移位于 `database/migrations/update/` 子目录，Laravel 默认不扫描子目录，`migrate:status` 看不到它——属正常现象，不代表未执行。如需重跑或新增子目录迁移，必须显式带路径：
-`php artisan migrate --path=database/migrations/update/<文件名>.php --force`
+⚠️ 该迁移位于 `database/migrations/update/` 子目录，Laravel 默认不扫描子目录，`migrate:status` 看不到属正常现象，不代表未执行。如需重跑或新增子目录迁移，必须显式带路径：
+
+```bash
+php artisan migrate --path=database/migrations/update/<文件名>.php --force
+```
+
+## ⚠️ 模型 Mass Assignment 陷阱
+
+以下模型**没有 `$fillable`**（Laravel 默认 `$guarded = ['*']`），`->create([...])` 会静默丢弃字段或抛 `MassAssignmentException`：
+
+- `Product`：必须 `Product::forceCreate(...)` 或 `$product->forceFill([...])->save()`
+- `TaxGroup`：同上
+- `UserAttribute`：`$fillable = ['language']`，写 `user_id`/`theme` 必须 `UserAttribute::forceCreate(...)`
+
+其他模型同理，编辑前先 `grep -nE "fillable|guarded" app/Models/<Model>.php`。
 
 ## 商品隔离业务规则
 
@@ -114,6 +123,15 @@ $storeIds = app()->bound( 'visible_store_ids' ) ? app( 'visible_store_ids' ) : [
 - 库存流水：`nexopos_products_histories` 带 `store_id`
 - 店铺类型：single/franchise 强隔离，chain 通过 `computeVisibleStoreIds()` 聚合
 
+### 自动上架机制（已实现）
+
+`NsMultiStoreServiceProvider::boot()` 注册 `Product::created` 监听器：
+
+- 全局商品（`store_id IS NULL`）创建时自动为所有活跃店铺插入 `nexopos_store_products` 记录（`is_active=true`）
+- 用 `firstOrCreate` 幂等，与 `ProductIsolationService::createGlobalProduct()` 不冲突
+- try-catch + `Log::error` 兜底，上架失败不阻塞商品创建
+- 历史孤儿商品用 `ns-multistore:sync-global-products` 回填
+
 ## 队列 worker
 
 改代码后重启 worker，否则加载旧代码：
@@ -124,10 +142,13 @@ podman-compose -p nexopos-dev -f podman-compose.dev.yml -f compose.override.lubu
 ```
 
 
-
 ## Git 纪律
 
-- `master @ 108b9ced6` 是迁移完成时的**稳定快照**（同时有 tag `codebuddy-backup-*`），可作为回滚基线
+- 稳定基线（tag）：
+  - `codebuddy-backup-20261108` — CodeBuddy 交接时的快照
+  - `dsh-baseline-20261109` — 切到 dsh 时的快照
+  - `dsh-fix-global-product-autopublish-20261110` — Product::created 监听器 + 4 场景测试
+  - `dsh-fix-store-create-500-20261110` — 测试 setUp 补 UserAttribute
 - 严禁 `git reset --hard` / `git clean` 到 **`232231b74`（多店铺模块起始提交）之前**的提交
 - 只 `git add` 明确改过的文件，**禁止 `git add -A` / `git add .`**（`chmod` 产生的 mode 变化会带进来）
 - 若 `git status` 突然显示几百个 modified，先跑 `git config core.fileMode false`
@@ -139,23 +160,72 @@ podman-compose -p nexopos-dev -f podman-compose.dev.yml -f compose.override.lubu
 - 启动/重启/停止容器前，先说明意图并等用户确认
 - 跑任何 `migrate`、`db:seed`、`migrate:fresh`、`db:wipe` 前，必须等用户明确批准
 - 读取数据库只读查询（SELECT/DESCRIBE）无需确认
+- **改完 PHP 文件必须跑 `vendor/bin/pint --dirty --format agent`**
+- 改完业务代码必须重启 `queue-worker`
 
 
 ## 测试环境初始化（sqlite）
 
-测试库 `tests/database.sqlite` 不在 git 中，需手动重建：
+测试库 `tests/database.sqlite` 不在 git 中，需手动重建。schema 变更后不会自动更新，需重跑。
 
-1. 建 `.env.testing`（DB_CONNECTION=sqlite、DB_DATABASE=/var/www/html/tests/database.sqlite、DB_PREFIX=ns_）
-2. `podman exec -e APP_ENV=testing -e DB_CONNECTION=sqlite -e ... php artisan migrate --path=database/migrations/core`
-3. 同参数 `migrate --path=database/migrations/create`
-4. 同参数 `migrate --path=database/migrations/update`
-5. 同参数 `migrate --path=modules/NsMultiStore/Migrations`（**不要用 modules:migrate，有 ucwords bug**）
-6. 手动插入 admin 用户（用 tinker + forceFill + assignRole）
-7. 跑测试
+### 步骤
 
-注意：`podman-compose exec` 的环境变量会被 compose 的 `environment` 覆盖，
-必须用 `podman exec -e ...` 显式传入，否则会连到 dev MySQL。
+1. 建 `.env.testing`（关键字段）：
 
+   ```ini
+   DB_CONNECTION=sqlite
+   DB_DATABASE=/var/www/html/tests/database.sqlite
+   DB_PREFIX=ns_
+   APP_ENV=testing
+   ```
+
+2. 按顺序跑核心迁移（**必须用 `podman exec -e`，不能用 `podman-compose exec`**）：
+
+   ```bash
+   podman exec -e APP_ENV=testing -e DB_CONNECTION=sqlite \
+     -e DB_DATABASE=/var/www/html/tests/database.sqlite -e DB_PREFIX=ns_ \
+     -u www-data nexopos-php php artisan migrate --path=database/migrations/core --force
+   ```
+
+   再依次 `--path=database/migrations/create`、`--path=database/migrations/update`。
+
+3. 模块迁移：
+
+   ```bash
+   podman exec -e APP_ENV=testing ... -u www-data nexopos-php \
+     php artisan migrate --path=modules/NsMultiStore/Migrations --force
+   ```
+
+   （**不要用 `modules:migrate`**，有 ucwords 大小写 bug）
+
+4. 插入 admin 用户 + UserAttribute（**dashboard 视图渲染必须**，缺了会 500）：
+
+   ```bash
+   podman exec -e APP_ENV=testing ... -u www-data nexopos-php php artisan tinker --execute='
+     $user = new \App\Models\User();
+     $user->forceFill(["username"=>"admin","email"=>"admin@test.local","password"=>bcrypt("password"),"active"=>true])->save();
+     $user->assignRole("admin");
+     \App\Models\UserAttribute::forceCreate(["user_id"=>$user->id,"theme"=>"light","language"=>"en"]);
+   '
+   ```
+
+5. 跑测试：
+
+   ```bash
+   podman exec -e APP_ENV=testing ... -u www-data nexopos-php \
+     ./vendor/bin/phpunit -c tests/phpunit.multistore.xml
+   ```
+
+### 环境变量覆盖陷阱
+
+`podman-compose exec` 会被 compose 的 `environment`（`DB_CONNECTION=mysql`、`DB_DATABASE=nexopos_dev`）覆盖，**必须用 `podman exec -e ...`** 显式传入 sqlite 配置。
+
+### 测试代码陷阱
+
+- `assertDatabaseHas/Missing` 表名**不要加 `ns_` 前缀**——connection prefix 会自动加，手动加变 `ns_ns_`
+- `Product`/`TaxGroup`/`UserAttribute` 没有 fillable，`->create([...])` 会失败，必须 `forceCreate`
+- 测试类 `setUp()` 里 `Artisan::call('modules:migrate', ...)` 要 try-catch 兜底（ucwords bug）
+- 需要数据隔离的场景在 `setUp()` 里显式 `StoreProduct::query()->delete(); Store::query()->delete()`
 
 ## 测试
 
@@ -163,8 +233,9 @@ podman-compose -p nexopos-dev -f podman-compose.dev.yml -f compose.override.lubu
 
 
 ```bash
-podman-compose -p nexopos-dev -f podman-compose.dev.yml -f compose.override.lubuntu.yml \
-  exec -u www-data -T php php ./vendor/bin/phpunit -c tests/phpunit.multistore.xml
+podman exec -e APP_ENV=testing -e DB_CONNECTION=sqlite \
+  -e DB_DATABASE=/var/www/html/tests/database.sqlite -e DB_PREFIX=ns_ \
+  -u www-data nexopos-php ./vendor/bin/phpunit -c tests/phpunit.multistore.xml
 ```
 
 
@@ -189,9 +260,20 @@ podman restart nexopos-prod-php nexopos-prod-nginx
 curl -I -s http://192.168.1.51:8080 | head -1
 ```
 
-
-
 **prod 上禁止**：`down`、`down -v`、`ns:reset`、`migrate:fresh`、`db:seed`、直接改业务代码。
+
+## 已知问题（待修）
+
+- `nexopos_products` 没有 `is_active` 列，软下架用 `status`（`available`/`unavailable`）
+- `modules:migrate` 命令在 Linux 上因 `ucwords` 大小写 bug 扫不到 `NsMultiStore/Migrations/`，dev 环境靠 `loadMigrationsFrom` 兜底，测试环境必须 `--path`
+- `tests/database.sqlite` 是预生成的静态库，不随 `migrate` 自动更新，schema 变更后需重跑子目录迁移
+- `StoreCreateTest::test_the_stores_list_page_is_reachable` 依赖 `admin->attribute->theme`，测试 setUp 必须补 `UserAttribute::forceCreate`
+- dashboard 视图依赖多个全局变量（`theme`、`menus`、`dateService` 等），测试环境渲染完整 HTML 需要较完整的基础数据，优先用 API 层断言或轻量 `assertStatus(200)`
+
+
+
+
+
 <laravel-boost-guidelines>
 
 
