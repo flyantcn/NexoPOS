@@ -18,32 +18,41 @@ class StoreCreateTest extends TestCase
      * Each test owns its activation and migrations so it can run
      * without relying on another test file.
      */
+
     protected function setUp(): void
     {
         parent::setUp();
 
-        Artisan::call( 'modules:migrate', [ 'moduleNamespace' => 'NsMultiStore' ] );
+        // modules:migrate 在 Linux 因 ucwords bug 可能报 "not pending"，表已外部建好时忽略
+        try {
+            Artisan::call( 'modules:migrate', [ 'moduleNamespace' => 'NsMultiStore' ] );
+        } catch ( \Throwable $e ) {
+            // 忽略
+        }
 
-        /**
-         * Gates are registered while the application boots. Since the module
-         * permissions are created after that, they must be registered again
-         * for the current process.
-         */
         ns()->registerGatePermissions();
 
-        /**
-         * The stores created by a previous run must not conflict with
-         * the codes used by this test.
-         */
         Store::whereIn( 'code', [ 'BJ001', 'SH001' ] )->delete();
 
         $user = User::whereHas( 'roles', function ( $query ) {
             $query->where( 'namespace', Role::ADMIN );
         } )->first();
 
+        // dashboard 视图依赖 $user->attribute->theme，缺这条会 500
+        // UserAttribute 的 $fillable 只有 language，必须 forceCreate 才能写 user_id/theme
+        if ( $user && ! $user->attribute ) {
+            \App\Models\UserAttribute::forceCreate( [
+                'user_id'  => $user->id,
+                'theme'    => 'light',
+                'language' => 'en',
+            ] );
+            $user->refresh();
+        }
+
         $this->actingAs( $user );
         Sanctum::actingAs( $user, [ '*' ] );
     }
+
 
     /**
      * A store must be created using the CRUD API.

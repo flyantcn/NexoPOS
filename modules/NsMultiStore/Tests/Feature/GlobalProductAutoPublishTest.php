@@ -29,6 +29,33 @@ class GlobalProductAutoPublishTest extends TestCase
         $admin = User::whereHas( 'roles', fn ( $query ) => $query->where( 'namespace', Role::ADMIN ) )->first();
         $this->actingAs( $admin );
 
+        // 与 StoreCreateTest 保持一致：dashboard 视图依赖 $user->attribute->theme
+        if ( $admin && ! $admin->attribute ) {
+            \App\Models\UserAttribute::forceCreate( [
+                'user_id'  => $admin->id,
+                'theme'    => 'light',
+                'language' => 'en',
+            ] );
+            $admin->refresh();
+        }        // 与 StoreCreateTest 保持一致：dashboard 视图依赖 $user->attribute->theme
+        if ( $admin && ! $admin->attribute ) {
+            \App\Models\UserAttribute::forceCreate( [
+                'user_id'  => $admin->id,
+                'theme'    => 'light',
+                'language' => 'en',
+            ] );
+            $admin->refresh();
+        }
+
+        // 确保 admin 有 UserAttribute（dashboard 视图依赖 $user->attribute->theme）
+        if ( ! $admin->attribute ) {
+            \App\Models\UserAttribute::create( [
+                'user_id'  => $admin->id,
+                'theme'    => 'light',
+                'language' => 'en',
+            ] );
+        }
+
         // factory 依赖：UnitGroup / Unit / TaxGroup
         if ( \App\Models\UnitGroup::count() === 0 ) {
             \App\Models\UnitGroup::factory()->create();

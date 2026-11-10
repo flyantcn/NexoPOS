@@ -141,6 +141,22 @@ podman-compose -p nexopos-dev -f podman-compose.dev.yml -f compose.override.lubu
 - 读取数据库只读查询（SELECT/DESCRIBE）无需确认
 
 
+## 测试环境初始化（sqlite）
+
+测试库 `tests/database.sqlite` 不在 git 中，需手动重建：
+
+1. 建 `.env.testing`（DB_CONNECTION=sqlite、DB_DATABASE=/var/www/html/tests/database.sqlite、DB_PREFIX=ns_）
+2. `podman exec -e APP_ENV=testing -e DB_CONNECTION=sqlite -e ... php artisan migrate --path=database/migrations/core`
+3. 同参数 `migrate --path=database/migrations/create`
+4. 同参数 `migrate --path=database/migrations/update`
+5. 同参数 `migrate --path=modules/NsMultiStore/Migrations`（**不要用 modules:migrate，有 ucwords bug**）
+6. 手动插入 admin 用户（用 tinker + forceFill + assignRole）
+7. 跑测试
+
+注意：`podman-compose exec` 的环境变量会被 compose 的 `environment` 覆盖，
+必须用 `podman exec -e ...` 显式传入，否则会连到 dev MySQL。
+
+
 ## 测试
 
 合并前必须通过多店铺测试：
